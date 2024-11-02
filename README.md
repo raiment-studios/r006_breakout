@@ -1,10 +1,5 @@
 # ❄️ r006_breakout
 
-An quick experiment in deploying a simple [Bevy](https://bevyengine.org) application to the web.
+A Breakout / Arkanoid clone written in Bevy.
 
-See https://raiment-studios.com/docs/snowfall/demos/wasm-canvas for full details, including the live demo.
-
-## TODO
-
--   [ ] Constraints on ball so it never leaves the arean
--   [ ] Investigate a 2d physics library
+See https://raiment-studios.com/docs/snowfall/games/breakout/ for full details, including the live demo.
