@@ -33,8 +33,9 @@ pub fn start(canvas_id: &str) {
         .add_systems(
             Update,
             (
-                movement_system,
-                check_paddle_collision.after(movement_system),
+                move_blocks,
+                input_system.after(move_blocks),
+                check_paddle_collision.after(input_system),
                 check_block_collisions,
                 check_ball_world_collisions.after(check_paddle_collision),
                 update_transforms,
@@ -68,7 +69,12 @@ fn setup(
 
     commands.spawn(Camera2dBundle::default());
 
-    for y in (-100..=340).step_by(60) {
+    let mut row = 0;
+    for y in (-100..=(340 * 5)).step_by(60) {
+        row += 1;
+        if row % 7 == 0 {
+            continue;
+        }
         for x in (-240..=240).step_by(80) {
             let px = (x) as f32;
             let py = (y) as f32;
@@ -77,15 +83,15 @@ fn setup(
     }
 
     {
-        let px = 100.0;
-        let py = 100.0;
+        let px = 20.0;
+        let py = -320.0;
         Ball::spawn(px, py, &mut commands, &mut meshes, &mut materials);
     }
 
     Paddle::spawn(0.0, -340.0, &mut commands, &mut meshes, &mut materials);
 }
 
-fn movement_system(
+fn input_system(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     windows: Query<&Window>,
     mut paddle_query: Query<(&mut Position, &Paddle), With<Paddle>>,
@@ -122,32 +128,44 @@ fn check_block_collisions(
     mut ball_query: Query<(&mut Position, &mut Velocity, &Ball), Without<Block>>,
     block_query: Query<(Entity, &Position, &Block), Without<Ball>>,
 ) {
-    for (ball_pos, mut ball_vel, ball) in &mut ball_query {
-        if ball_vel.value.y < 0.0 {
-            continue;
-        }
-
-        for (block_ent, block_pos, block) in &block_query {
+    for (block_ent, block_pos, block) in &block_query {
+        for (ball_pos, mut ball_vel, ball) in &mut ball_query {
             let block_bounds = block.bounds(block_pos);
             let block_x0 = block_bounds.min.x;
             let block_x1 = block_bounds.max.x;
             let block_y0 = block_bounds.min.y;
+            let block_y1 = block_bounds.max.y;
 
-            let ball_x = ball_pos.value.x;
-            let ball_y = ball_pos.value.y;
+            let ball_x0 = ball_pos.value.x - ball.radius;
+            let ball_x1 = ball_pos.value.x + ball.radius;
             let ball_y1 = ball_pos.value.y + ball.radius;
+            let ball_y0 = ball_pos.value.y - ball.radius;
 
-            if ball_x < block_x0 || ball_x > block_x1 {
+            if ball_x1 < block_x0 || ball_x0 > block_x1 {
                 continue;
             }
-            if ball_y1 < block_y0 || ball_y > block_y0 {
+
+            if ball_vel.value.y > 0.0 {
+                if ball_y1 < block_y0 || ball_y0 > block_y1 {
+                    continue;
+                }
+
+                ball_vel.value.y = -ball_vel.value.y.abs();
+
+                info!("Despawning block");
+                commands.entity(block_ent).despawn();
+                continue;
+            } else {
+                if ball_y0 > block_y1 || ball_y1 < block_y0 {
+                    continue;
+                }
+
+                ball_vel.value.y = ball_vel.value.y.abs();
+
+                info!("Despawning block");
+                commands.entity(block_ent).despawn();
                 continue;
             }
-
-            ball_vel.value.y = -ball_vel.value.y.abs();
-
-            info!("Despawning block");
-            commands.entity(block_ent).despawn();
         }
     }
 }
@@ -221,6 +239,12 @@ fn check_ball_world_collisions(
             v.y = -v.y.abs();
         }
         *p = q;
+    }
+}
+
+fn move_blocks(mut ent: Query<(&mut Position, &Block)>) {
+    for (mut position, block) in &mut ent {
+        position.value.y -= 4e-2;
     }
 }
 

@@ -44,7 +44,6 @@ impl Block {
 
         let saturation = 0.35 + rand::random::<f32>() * 0.25;
         let lightness = 0.5 + rand::random::<f32>() * 0.25;
-
         let color = ColorMaterial::from(Color::hsl(hue, saturation, lightness));
 
         let mesh_handle = meshes.add(mesh);

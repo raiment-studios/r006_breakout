@@ -29,9 +29,7 @@ impl Ball {
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<ColorMaterial>>,
     ) {
-        let ball = Ball {
-            radius: (4.0 + rand::random::<f32>() * 8.0) * 2.0,
-        };
+        let ball = Ball { radius: 10.0 };
 
         let mesh = Mesh::from(Circle {
             radius: ball.radius,
@@ -50,14 +48,14 @@ impl Ball {
         let vx = rand_sign() * ((rand::random::<f32>() * 2.) + 0.5);
         let vy = rand_sign() * ((rand::random::<f32>() * 2.) + 0.5);
         let s = 8.0;
-        let v = Vec2::new(vx, -vy.abs());
+        let v = Vec2::new(vx, vy.abs());
         let v = v.normalize() * s;
 
         commands.spawn((
             Ball2Bundle {
                 ball,
                 position: Position {
-                    value: Vec2::new(px, 20.0 * (py / 20.0).floor()),
+                    value: Vec2::new(px, py),
                 },
                 velocity: Velocity { value: v },
             },
