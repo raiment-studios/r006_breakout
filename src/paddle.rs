@@ -2,14 +2,14 @@ use crate::common::*;
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
 #[derive(Bundle)]
-pub struct BlockBundle {
-    block: Block,
+pub struct PaddleBundle {
+    paddle: Paddle,
     velocity: Velocity,
     position: Position,
 }
 
 #[derive(Component)]
-pub struct Block {
+pub struct Paddle {
     pub height: f32,
     pub width: f32,
 }
@@ -22,7 +22,7 @@ fn rand_sign() -> f32 {
     }
 }
 
-impl Block {
+impl Paddle {
     pub fn spawn(
         px: f32,
         py: f32,
@@ -30,20 +30,20 @@ impl Block {
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<ColorMaterial>>,
     ) {
-        let block = Block {
+        let paddle = Paddle {
             height: 24.0,
-            width: 60.0,
+            width: 240.0,
         };
 
-        let mesh = Mesh::from(Rectangle::new(block.width, block.height));
+        let mesh = Mesh::from(Rectangle::new(paddle.width / 1.0, paddle.height / 1.0));
 
         let hue = match rand::random::<f32>() > 0.5 {
-            true => 32.0,
-            false => 210.0,
+            true => 12.0,
+            false => 14.0,
         } + (-10.0 + rand::random::<f32>() * 20.0);
 
-        let saturation = 0.35 + rand::random::<f32>() * 0.25;
-        let lightness = 0.5 + rand::random::<f32>() * 0.25;
+        let saturation = 0.75 + rand::random::<f32>() * 0.25;
+        let lightness = 0.25 + rand::random::<f32>() * 0.25;
 
         let color = ColorMaterial::from(Color::hsl(hue, saturation, lightness));
 
@@ -56,10 +56,10 @@ impl Block {
         let (vx, vy) = (vx * s, vy * s);
 
         commands.spawn((
-            BlockBundle {
-                block,
+            PaddleBundle {
+                paddle,
                 position: Position {
-                    value: Vec2::new(px, 20.0 * (py / 20.0).floor()),
+                    value: Vec2::new(px, py),
                 },
                 velocity: Velocity {
                     value: Vec2::new(vx, vy),

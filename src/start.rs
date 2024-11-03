@@ -16,6 +16,7 @@ use wasm_bindgen::prelude::*;
 use crate::ball::Ball;
 use crate::block::Block;
 use crate::common::*;
+use crate::paddle::Paddle;
 
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) {
@@ -33,9 +34,9 @@ pub fn start(canvas_id: &str) {
         .add_systems(
             Update,
             (
-                move_blocks, //
-                move_ball2,
-                check_intersections,
+                check_paddle_collision,
+                check_block_collisions,
+                check_ball_world_collisions.after(check_paddle_collision),
                 update_transforms,
             ),
         )
@@ -67,10 +68,12 @@ fn setup(
 
     commands.spawn(Camera2dBundle::default());
 
-    for _ in 0..20 {
-        let px = (rand::random::<f32>() - 0.5) * window.width();
-        let py = (rand::random::<f32>() - 0.5) * window.height();
-        Block::spawn(px, py, &mut commands, &mut meshes, &mut materials);
+    for y in (-100..=340).step_by(60) {
+        for x in (-240..=240).step_by(80) {
+            let px = (x) as f32;
+            let py = (y) as f32;
+            Block::spawn(px, py, &mut commands, &mut meshes, &mut materials);
+        }
     }
 
     {
@@ -78,108 +81,60 @@ fn setup(
         let py = 100.0;
         Ball::spawn(px, py, &mut commands, &mut meshes, &mut materials);
     }
+
+    Paddle::spawn(0.0, -340.0, &mut commands, &mut meshes, &mut materials);
 }
 
-fn check_circle_rect_collision(
-    circle_pos: Vec2,
-    radius: f32,
-    rect_pos: Vec2,
-    rect_size: Vec2,
-) -> Option<(Vec2, f32)> {
-    let clamped_x = circle_pos.x.clamp(rect_pos.x, rect_pos.x + rect_size.x);
-    let clamped_y = circle_pos.y.clamp(rect_pos.y, rect_pos.y + rect_size.y);
-    let closest_point = Vec2::new(clamped_x, clamped_y);
-
-    let distance_vector = circle_pos - closest_point;
-    let distance = distance_vector.length();
-    if distance > radius {
-        return None;
-    }
-
-    let penetration_depth = radius - distance;
-    let collision_normal = distance_vector.normalize();
-
-    if penetration_depth.is_nan() || penetration_depth.is_infinite() {
-        warn!("penetration_depth is NaN or infinite");
-        return None;
-    }
-    // Check if collision_normal is NaN or infinite
-    if collision_normal.x.is_nan()
-        || collision_normal.x.is_infinite()
-        || collision_normal.y.is_nan()
-        || collision_normal.y.is_infinite()
-    {
-        warn!("collision_normal is NaN or infinite");
-        return None;
-    }
-
-    Some((collision_normal, penetration_depth))
-}
-
-fn resolve_circle_rect_collision(
-    circle_pos: &mut Vec2,
-    circle_vel: &mut Vec2,
-    rect_vel: &Vec2,
-    normal: Vec2,
-    penetration: f32,
+fn check_block_collisions(
+    mut ball_query: Query<(&mut Position, &mut Velocity, &Ball), Without<Block>>,
+    block_query: Query<(&Position, &Block), Without<Ball>>,
 ) {
-    let original_speed = circle_vel.length();
+    for (block_pos, block) in &block_query {
+        for (ball_pos, mut ball_vel, ball) in &mut ball_query {
+            let block_bounds = block.bounds(block_pos);
+            let block_x0 = block_bounds.min.x;
+            let block_x1 = block_bounds.max.x;
+            let block_y0 = block_bounds.min.y;
 
-    // Separate circle to avoid overlap
-    *circle_pos += normal * penetration;
+            let ball_x = ball_pos.value.x;
+            let ball_y1 = ball_pos.value.y + ball.radius;
 
-    // Reflect circle's velocity
-    let relative_velocity = *circle_vel - *rect_vel;
-    let vel_along_normal = relative_velocity.dot(normal);
-
-    if vel_along_normal < 0.0 {
-        let restitution = 1.0; // Adjust this for elasticity
-        let impulse_magnitude = -(1.0 + restitution) * vel_along_normal;
-        let impulse = impulse_magnitude * normal;
-        *circle_vel += impulse;
-    }
-
-    let direction = (*circle_vel).normalize();
-
-    // Rotate the direction by a random -5 to 5 degrees
-    let angle = (rand::random::<f32>() - 0.5) * 5.0;
-    let radians = angle.to_radians();
-    let rotation = Vec2::new(radians.cos(), radians.sin());
-
-    // Reset the circle speed
-    *circle_vel = direction.rotate(rotation) * original_speed;
-}
-
-fn check_intersections(
-    block_query: Query<(&Position, &Velocity, &Block), Without<Ball>>,
-    mut ball_query: Query<(&mut Position, &mut Velocity, &Ball)>,
-) {
-    for (block_pos, block_vel, block) in &mut block_query.iter() {
-        let block_size = Vec2::new(block.width, block.height);
-        let block_half_size = Vec2::new(block.width / 2.0, block.height / 2.0);
-        let block_pos_offset = block_pos.value - block_half_size;
-
-        for (mut ball_pos, mut ball_vel, ball) in ball_query.iter_mut() {
-            let result = check_circle_rect_collision(
-                ball_pos.value,
-                ball.radius,
-                block_pos_offset,
-                block_size,
-            );
-            if let Some((normal, penetration)) = result {
-                resolve_circle_rect_collision(
-                    &mut ball_pos.value,
-                    &mut ball_vel.value,
-                    &block_vel.value,
-                    normal,
-                    penetration,
-                );
+            if ball_x < block_x0 || ball_x > block_x1 || ball_y1 < block_y0 {
+                continue;
             }
+
+            ball_vel.value.y = -ball_vel.value.y.abs();
         }
     }
 }
 
-fn move_ball2(mut ent: Query<(&mut Position, &mut Velocity, &Ball)>, windows: Query<&Window>) {
+fn check_paddle_collision(
+    mut ball_query: Query<(&mut Position, &mut Velocity, &Ball), Without<Paddle>>,
+    paddle_query: Query<(&Position, &Paddle), Without<Ball>>,
+) {
+    for (paddle_pos, paddle) in &paddle_query {
+        for (ball_pos, mut ball_vel, ball) in &mut ball_query {
+            let paddle_bounds = paddle.bounds(paddle_pos);
+            let paddle_x0 = paddle_bounds.min.x;
+            let paddle_x1 = paddle_bounds.max.x;
+            let paddle_y1 = paddle_bounds.max.y;
+
+            let ball_x = ball_pos.value.x;
+            let ball_y0 = ball_pos.value.y - ball.radius;
+
+            if ball_x < paddle_x0 || ball_x > paddle_x1 || ball_y0 > paddle_y1 {
+                continue;
+            }
+
+            ball_vel.value.y = ball_vel.value.y.abs();
+        }
+    }
+}
+
+fn check_ball_world_collisions(
+    mut ent: Query<(&mut Position, &mut Velocity, &Ball)>,
+    windows: Query<&Window>,
+) {
     let window = windows.single();
     let window_size = Vec2::new(window.width(), window.height());
     let half_width = window_size.x / 2.;
@@ -220,27 +175,6 @@ fn move_ball2(mut ent: Query<(&mut Position, &mut Velocity, &Ball)>, windows: Qu
         if !(q.y < half_height - ball.radius) {
             q.y = half_height - ball.radius;
             v.y = -v.y.abs();
-        }
-        *p = q;
-    }
-}
-
-fn move_blocks(mut ent: Query<(&mut Position, &mut Velocity, &Block)>, windows: Query<&Window>) {
-    let window = windows.single();
-    let window_size = Vec2::new(window.width(), window.height());
-    let half_width = window_size.x / 2.;
-
-    for (mut position, mut velocity, block) in &mut ent {
-        let v = &mut velocity.value;
-        let p = &mut position.value;
-        let q = *p + *v;
-        if q.x < -half_width + block.width / 2.0 {
-            p.x = -half_width + block.width / 2.0;
-            v.x = v.x.abs();
-        }
-        if q.x > half_width - block.width / 2.0 {
-            p.x = half_width - block.width / 2.0;
-            v.x = -v.x.abs();
         }
         *p = q;
     }
