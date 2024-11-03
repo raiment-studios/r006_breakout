@@ -44,6 +44,11 @@ pub fn start(canvas_id: &str) {
         .run();
 }
 
+#[derive(Resource)]
+struct GameState {
+    encroach_speed: f32,
+}
+
 fn setup(
     mut windows: Query<&mut Window>,
     mut commands: Commands,
@@ -68,6 +73,10 @@ fn setup(
     window.resizable = false;
 
     commands.spawn(Camera2dBundle::default());
+
+    commands.insert_resource(GameState {
+        encroach_speed: 4e-2,
+    });
 
     let mut row = 0;
     for y in (-100..=(340 * 5)).step_by(60) {
@@ -242,9 +251,17 @@ fn check_ball_world_collisions(
     }
 }
 
-fn move_blocks(mut ent: Query<(&mut Position, &Block)>) {
-    for (mut position, block) in &mut ent {
-        position.value.y -= 4e-2;
+fn move_blocks(
+    mut state: ResMut<GameState>,
+    frames: Res<bevy::core::FrameCount>,
+    mut query: Query<(&mut Position, &Block)>,
+) {
+    for (mut position, _block) in &mut query {
+        position.value.y -= state.encroach_speed
+    }
+
+    if frames.0 % 60 == 0 {
+        state.encroach_speed *= 1.1;
     }
 }
 
