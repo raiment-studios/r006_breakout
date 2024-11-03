@@ -83,7 +83,7 @@ publish-source:
 	git add .
 	git commit -m "Automated commit from monorepo"
 	git push
-	-rm -rf vendor/raibuild
+	echo -rm -rf vendor/raibuild
 	rm -rf .git
 
 publish: build publish-source publish-deploy
