@@ -77,6 +77,8 @@ publish-source:
 	mv __temp/.git .
 	rm -rf __temp
 	-rm -rf vendor/raibuild
+	-rm vendor/raibuild
+	ls -al vendor
 	cp -R $(MONOREPO_ROOT)/lib/raibuild $(PWD)/vendor/raibuild
 	git config user.email ridley.grenwood.winters@gmail.com
 	git config user.name "Ridley Winters"
