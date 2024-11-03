@@ -76,16 +76,17 @@ publish-source:
 	git clone git@github.com:raiment-studios/$(PROJ).git __temp
 	mv __temp/.git .
 	rm -rf __temp
-	-rm -rf vendor/raibuild
-	-rm vendor/raibuild
-	ls -al vendor
+	mkdir -p temp
+	mv vendor temp/vendor
+	mkdir -p vendor
 	cp -R $(MONOREPO_ROOT)/lib/raibuild $(PWD)/vendor/raibuild
 	git config user.email ridley.grenwood.winters@gmail.com
 	git config user.name "Ridley Winters"
 	git add .
 	git commit -m "Automated commit from monorepo"
 	git push
-	echo -rm -rf vendor/raibuild
+	rm -rf vendor
+	mv temp/vendor vendor
 	rm -rf .git
 
 publish: build publish-source publish-deploy
