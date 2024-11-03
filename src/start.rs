@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
@@ -34,7 +33,8 @@ pub fn start(canvas_id: &str) {
         .add_systems(
             Update,
             (
-                check_paddle_collision,
+                movement_system,
+                check_paddle_collision.after(movement_system),
                 check_block_collisions,
                 check_ball_world_collisions.after(check_paddle_collision),
                 update_transforms,
@@ -85,25 +85,69 @@ fn setup(
     Paddle::spawn(0.0, -340.0, &mut commands, &mut meshes, &mut materials);
 }
 
-fn check_block_collisions(
-    mut ball_query: Query<(&mut Position, &mut Velocity, &Ball), Without<Block>>,
-    block_query: Query<(&Position, &Block), Without<Ball>>,
+fn movement_system(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    windows: Query<&Window>,
+    mut paddle_query: Query<(&mut Position, &Paddle), With<Paddle>>,
 ) {
-    for (block_pos, block) in &block_query {
-        for (ball_pos, mut ball_vel, ball) in &mut ball_query {
+    let window = windows.single();
+    let window_size = Vec2::new(window.width(), window.height());
+    let half_width = window_size.x / 2.;
+
+    for (mut position, paddle) in &mut paddle_query {
+        let p = &mut position.value;
+
+        // Check for key presses and adjust direction accordingly
+        let mut direction = Vec3::ZERO;
+
+        if keyboard_input.pressed(KeyCode::ArrowLeft) {
+            info!("ArrowLeft pressed");
+            direction.x -= 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::ArrowRight) {
+            direction.x += 1.0;
+        }
+
+        const PAD: f32 = 10.0;
+        let q = p.x + direction.x * 12.0;
+        p.x = q.clamp(
+            -half_width + paddle.width / 2.0 + PAD,
+            half_width - paddle.width / 2.0 - PAD,
+        );
+    }
+}
+
+fn check_block_collisions(
+    mut commands: Commands,
+    mut ball_query: Query<(&mut Position, &mut Velocity, &Ball), Without<Block>>,
+    block_query: Query<(Entity, &Position, &Block), Without<Ball>>,
+) {
+    for (ball_pos, mut ball_vel, ball) in &mut ball_query {
+        if ball_vel.value.y < 0.0 {
+            continue;
+        }
+
+        for (block_ent, block_pos, block) in &block_query {
             let block_bounds = block.bounds(block_pos);
             let block_x0 = block_bounds.min.x;
             let block_x1 = block_bounds.max.x;
             let block_y0 = block_bounds.min.y;
 
             let ball_x = ball_pos.value.x;
+            let ball_y = ball_pos.value.y;
             let ball_y1 = ball_pos.value.y + ball.radius;
 
-            if ball_x < block_x0 || ball_x > block_x1 || ball_y1 < block_y0 {
+            if ball_x < block_x0 || ball_x > block_x1 {
+                continue;
+            }
+            if ball_y1 < block_y0 || ball_y > block_y0 {
                 continue;
             }
 
             ball_vel.value.y = -ball_vel.value.y.abs();
+
+            info!("Despawning block");
+            commands.entity(block_ent).despawn();
         }
     }
 }

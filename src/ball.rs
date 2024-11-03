@@ -49,8 +49,9 @@ impl Ball {
 
         let vx = rand_sign() * ((rand::random::<f32>() * 2.) + 0.5);
         let vy = rand_sign() * ((rand::random::<f32>() * 2.) + 0.5);
-        let s = 2.05;
-        let (vx, vy) = (vx * s, vy * s);
+        let s = 8.0;
+        let v = Vec2::new(vx, -vy.abs());
+        let v = v.normalize() * s;
 
         commands.spawn((
             Ball2Bundle {
@@ -58,9 +59,7 @@ impl Ball {
                 position: Position {
                     value: Vec2::new(px, 20.0 * (py / 20.0).floor()),
                 },
-                velocity: Velocity {
-                    value: Vec2::new(vx, vy),
-                },
+                velocity: Velocity { value: v },
             },
             MaterialMesh2dBundle {
                 mesh: mesh_handle.into(),

@@ -32,15 +32,12 @@ impl Paddle {
     ) {
         let paddle = Paddle {
             height: 24.0,
-            width: 240.0,
+            width: 160.0,
         };
 
         let mesh = Mesh::from(Rectangle::new(paddle.width / 1.0, paddle.height / 1.0));
 
-        let hue = match rand::random::<f32>() > 0.5 {
-            true => 12.0,
-            false => 14.0,
-        } + (-10.0 + rand::random::<f32>() * 20.0);
+        let hue = 12.0 + (-10.0 + rand::random::<f32>() * 20.0);
 
         let saturation = 0.75 + rand::random::<f32>() * 0.25;
         let lightness = 0.25 + rand::random::<f32>() * 0.25;
