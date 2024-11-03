@@ -4,6 +4,8 @@
 
 PROJ=r006_breakout
 
+RAIBUILD=$(PWD)/vendor/raibuild
+
 # --------------------------------------------------------------------------- #
 # ensure
 # --------------------------------------------------------------------------- #
@@ -16,6 +18,9 @@ ensure:
 		cargo update -p wasm-bindgen --precise 0.2.95
 	which mprocs || cargo install mprocs
 	npm install
+	-rm -rf $(PWD)/vendor/raibuild
+	-ln -s $(MONOREPO_ROOT)/lib/raibuild $(PWD)/vendor/raibuild
+
 
 # --------------------------------------------------------------------------- #
 # build
@@ -45,7 +50,7 @@ dev-watch:
 		--exec "make build || exit 1" \
 
 dev: ensure
-	./scripts/launch_multiple.ts dev-watch run-server
+	$(RAIBUILD)/make_multiple.ts dev-watch run-server
 
 # --------------------------------------------------------------------------- #
 # run
@@ -71,11 +76,14 @@ publish-source:
 	git clone git@github.com:raiment-studios/$(PROJ).git __temp
 	mv __temp/.git .
 	rm -rf __temp
+	-rm vendor/raibuild
+	cp -R $(MONOREPO_ROOT)/lib/raibuild $(PWD)/vendor/raibuild
 	git config user.email ridley.grenwood.winters@gmail.com
 	git config user.name "Ridley Winters"
 	git add .
 	git commit -m "Automated commit from monorepo"
 	git push
+	-rm -rf vendor/raibuild
 	rm -rf .git
 
 publish: build publish-source publish-deploy
