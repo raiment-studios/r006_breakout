@@ -70,23 +70,20 @@ run-server:
 
 .PHONY: publish publish-source publish-deploy
 
-publish-source:
+publish-source: build
 	-gh repo create raiment-studios/$(PROJ) --public
 	rm -rf __temp .git
-	git clone git@github.com:raiment-studios/$(PROJ).git __temp
-	mv __temp/.git .
-	rm -rf __temp
-	mkdir -p temp
-	mv vendor temp/vendor
-	cp -aLR temp/vendor vendor
-	git config user.email ridley.grenwood.winters@gmail.com
-	git config user.name "Ridley Winters"
-	git add .
-	git commit -m "Automated commit from monorepo"
-	git push
-	rm -rf vendor
-	mv temp/vendor vendor
-	rm -rf .git
+	cp -aLR . __temp1
+	git clone git@github.com:raiment-studios/$(PROJ).git __temp2
+	mv __temp2/.git __temp1/.git
+	rm -rf __temp2	
+	cd __temp1 && \
+		git config user.email ridley.grenwood.winters@gmail.com && \
+		git config user.name "Ridley Winters" && \
+		git add . && \
+		git commit -m "Automated commit from monorepo" && \
+		git push 
+	rm -rf __temp1
 
 publish: build publish-source publish-deploy
 
