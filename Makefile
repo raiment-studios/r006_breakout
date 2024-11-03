@@ -5,6 +5,7 @@
 PROJ=r006_breakout
 
 RAIBUILD=$(PWD)/vendor/raibuild
+CPRINT=$(RAIBUILD)/cprint.ts
 
 # --------------------------------------------------------------------------- #
 # ensure
@@ -71,25 +72,25 @@ run-server:
 .PHONY: publish publish-source publish-deploy
 
 publish-source: build
-	@echo "Building source to ensure any vendor dependencies are included"
+	@$(CPRINT) ff0  "Building source to ensure any vendor dependencies are included"
 	make build
-	@echo "Ensuring remote repo is created"
+	@$(CPRINT) ff0 "Ensuring remote repo is created"
 	-gh repo create raiment-studios/$(PROJ) --public
-	@echo "Cloning local & remote source to __temp1 and __temp2"
+	@$(CPRINT) ff0 "Cloning local & remote source to __temp1 and __temp2"
 	rm -rf __temp1 __temp2 .git
 	cp -aLR . __temp1
 	git clone git@github.com:raiment-studios/$(PROJ).git __temp2
-	@echo "Moving remote .git to local copy"
+	@$(CPRINT) ff0  "Moving remote .git to local copy"
 	mv __temp2/.git __temp1/.git
 	rm -rf __temp2	
-	@echo "Committing & pushing to remote"
+	@$(CPRINT) ff0  "Committing & pushing to remote"
 	cd __temp1 && \
 		git config user.email ridley.grenwood.winters@gmail.com && \
 		git config user.name "Ridley Winters" && \
 		git add . && \
 		git commit -m "Automated commit from monorepo" && \
 		git push 
-	@echo "Cleaning up"
+	@$(CPRINT) ff0  "Cleaning up"
 	rm -rf __temp1 __temp2 .git
 
 publish: build publish-source publish-deploy
