@@ -72,25 +72,25 @@ run-server:
 .PHONY: publish publish-source publish-deploy
 
 publish-source:
-	@$(CPRINT) c121ed  "🗻 Building source to ensure any vendor dependencies are included"
+	@$(CPRINT) "Building source to ensure any vendor dependencies are included"
 	make build
-	@$(CPRINT) c121ed "🗻 Ensuring remote repo is created"
+	@$(CPRINT) "Ensuring remote repo is created"
 	-gh repo create raiment-studios/$(PROJ) --public
-	@$(CPRINT) c121ed "🗻 Cloning local & remote source to __temp1 and __temp2"
+	@$(CPRINT) "Cloning local & remote source to __temp1 and __temp2"
 	rm -rf __temp1 __temp2 .git
 	cp -aLR . __temp1
 	git clone git@github.com:raiment-studios/$(PROJ).git __temp2
-	@$(CPRINT) c121ed  "🗻 Moving remote .git to local copy"
+	@$(CPRINT) "Moving remote .git to local copy"
 	mv __temp2/.git __temp1/.git
 	rm -rf __temp2	
-	@$(CPRINT) c121ed  "🗻 Committing & pushing to remote"
+	@$(CPRINT) "Committing & pushing to remote"
 	cd __temp1 && \
 		git config user.email ridley.grenwood.winters@gmail.com && \
 		git config user.name "Ridley Winters" && \
 		git add . && \
 		git commit -m "Automated commit from monorepo" && \
 		git push 
-	@$(CPRINT) c121ed  "🗻 Cleaning up"
+	@$(CPRINT) "Cleaning up"
 	rm -rf __temp1 __temp2 .git
 
 publish: build publish-source publish-deploy
