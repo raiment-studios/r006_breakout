@@ -79,6 +79,7 @@ publish-source:
 	@$(CPRINT) "Cloning local & remote source to __temp1 and __temp2"
 	rm -rf __temp1 __temp2 .git
 	cp -aLR . __temp1
+	rm -f __temp1/vendor/.gitignore
 	git clone git@github.com:raiment-studios/$(PROJ).git __temp2
 	@$(CPRINT) "Moving remote .git to local copy"
 	mv __temp2/.git __temp1/.git
